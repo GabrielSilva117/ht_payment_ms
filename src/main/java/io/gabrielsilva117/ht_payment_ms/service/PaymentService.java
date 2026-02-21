@@ -22,11 +22,17 @@ public class PaymentService {
     }
 
     public void processPayment(String message) throws JsonProcessingException {
+        triggerPayment(this.constructDTO(message));
 
         notificationPublisher.publishNotification(new NotificationDTO(
                 "Purchase Complete!",
                 "Congratulations, your purchase has been completed!",
                 "gabriel.f.silva117@gmail.com"
         ));
+    }
+
+    private void triggerPayment(PaymentDTO paymentDTO) {
+        // trigger payment from the gateway selected by the client
+        paymentFactory.getProcessor(paymentDTO.getType());
     }
 }
