@@ -33,7 +33,7 @@ public class MQConfig {
 
     // Bindings
     @Bean
-    public Binding inventoryBinding(Queue paymentQueue, TopicExchange paymentExchange) {
+    public Binding successPaymentBinding(Queue paymentQueue, TopicExchange paymentExchange) {
         // Listen to all "created" orders regardless of category
         return BindingBuilder.bind(paymentQueue)
                 .to(paymentExchange)
