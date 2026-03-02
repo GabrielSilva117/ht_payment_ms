@@ -33,13 +33,27 @@ public class MQConfig {
 
     // Bindings
     @Bean
-    public Binding inventoryBinding(Queue paymentQueue, TopicExchange paymentExchange) {
+    public Binding successPaymentBinding(Queue paymentQueue, TopicExchange paymentExchange) {
         // Listen to all "created" orders regardless of category
         return BindingBuilder.bind(paymentQueue)
                 .to(paymentExchange)
                 .with("payment.*.created");
     }
 
+
+    @Bean
+    public Binding creditCardBinding(Queue paymentQueue, TopicExchange paymentExchange) {
+        return BindingBuilder.bind(paymentQueue)
+                .to(paymentExchange)
+                .with("payment.card.credit.*");
+    }
+
+    @Bean
+    public Binding debitCardBinding(Queue paymentQueue, TopicExchange paymentExchange) {
+        return BindingBuilder.bind(paymentQueue)
+                .to(paymentExchange)
+                .with("payment.card.debit.*");
+    }
 //    @Bean
 //    public Binding notificationBinding(Queue notificationQueue, TopicExchange orderExchange) {
 //        // Listen to all order events (created, shipped, delivered, etc.)
