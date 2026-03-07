@@ -1,6 +1,6 @@
 package io.gabrielsilva117.ht_payment_ms.processor;
 
-import io.gabrielsilva117.ht_payment_ms.dto.CardPaymentDTO;
+import io.gabrielsilva117.ht_payment_ms.dto.PaymentDTO;
 import io.gabrielsilva117.ht_payment_ms.dto.DebitCardPaymentDTO;
 import io.gabrielsilva117.ht_payment_ms.enums.PaymentType;
 import org.slf4j.Logger;
@@ -12,7 +12,7 @@ public class DebitCartProcessor implements PaymentProcessor {
     private static final Logger logger = LoggerFactory.getLogger(DebitCartProcessor.class);
 
     @Override
-    public void process(CardPaymentDTO payment) {
+    public void process(PaymentDTO payment) {
         DebitCardPaymentDTO debitPayment = (DebitCardPaymentDTO) payment;
 
     }

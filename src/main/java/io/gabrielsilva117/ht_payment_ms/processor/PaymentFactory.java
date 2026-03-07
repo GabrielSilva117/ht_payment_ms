@@ -1,6 +1,5 @@
 package io.gabrielsilva117.ht_payment_ms.processor;
 
-import io.gabrielsilva117.ht_payment_ms.enums.paymentType;
 import io.gabrielsilva117.ht_payment_ms.enums.PaymentType;
 import org.springframework.stereotype.Component;
 

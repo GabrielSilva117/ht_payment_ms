@@ -8,7 +8,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-public class CreditCardPaymentDTO extends CardPaymentDTO {
+public class CreditCardPaymentDTO extends PaymentDTO {
     private String creditLimit;
 
     public CreditCardPaymentDTO () {

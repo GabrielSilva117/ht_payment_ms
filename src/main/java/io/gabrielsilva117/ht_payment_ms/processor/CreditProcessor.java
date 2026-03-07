@@ -1,17 +1,19 @@
 package io.gabrielsilva117.ht_payment_ms.processor;
 
-import io.gabrielsilva117.ht_payment_ms.dto.CardPaymentDTO;
 import io.gabrielsilva117.ht_payment_ms.dto.CreditCardPaymentDTO;
+import io.gabrielsilva117.ht_payment_ms.dto.PaymentDTO;
 import io.gabrielsilva117.ht_payment_ms.enums.PaymentType;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.springframework.stereotype.Component;
 
+@Component
 public class CreditProcessor implements PaymentProcessor {
     private static final Logger logger = LoggerFactory.getLogger(CreditProcessor.class);
 
 
     @Override
-    public void process(CardPaymentDTO payment) {
+    public void process(PaymentDTO payment) {
         CreditCardPaymentDTO creditPayment = (CreditCardPaymentDTO) payment;
 
         validateCreditLimit(creditPayment);

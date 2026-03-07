@@ -4,7 +4,7 @@ import io.gabrielsilva117.ht_payment_ms.enums.PaymentType;
 
 import java.math.BigDecimal;
 
-public class DebitCardPaymentDTO extends CardPaymentDTO {
+public class DebitCardPaymentDTO extends PaymentDTO {
     private BigDecimal dailyLimit;
 
 
