@@ -1,17 +1,20 @@
 package io.gabrielsilva117.ht_payment_ms.dto;
 
-import io.gabrielsilva117.ht_payment_ms.enums.CardType;
 import io.gabrielsilva117.ht_payment_ms.enums.PaymentType;
 import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
-import java.util.UUID;
-
-@Data
 @AllArgsConstructor
-@NoArgsConstructor
-public class CardPaymentDTO {
-    private PaymentType type;
-    private UUID cartId;
+@Getter
+@Setter
+public class CardPaymentDTO extends PaymentDTO {
+    private String cardNumber;
+    private String CVV;
+    private String cardHolderName;
+    private String expirationDate;
+
+    public CardPaymentDTO() {
+        this.setType(PaymentType.CARD);
+    }
 }

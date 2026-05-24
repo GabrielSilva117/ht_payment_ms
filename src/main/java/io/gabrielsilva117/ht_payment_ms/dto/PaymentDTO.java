@@ -14,8 +14,7 @@ import java.util.UUID;
         property = "type"                 // Property name in JSON
 )
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = CreditCardPaymentDTO.class, name = "CARD_CREDIT"),
-        @JsonSubTypes.Type(value = DebitCardPaymentDTO.class, name = "CARD_DEBIT"),
+        @JsonSubTypes.Type(value = CardPaymentDTO.class, name = "CARD"),
 })
 @Data
 public class PaymentDTO {

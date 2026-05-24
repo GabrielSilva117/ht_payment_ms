@@ -42,18 +42,18 @@ public class MQConfig {
 
 
     @Bean
-    public Binding creditCardBinding(Queue paymentQueue, TopicExchange paymentExchange) {
+    public Binding cardBinding(Queue paymentQueue, TopicExchange paymentExchange) {
         return BindingBuilder.bind(paymentQueue)
                 .to(paymentExchange)
-                .with("payment.card.credit.*");
+                .with("payment.card.*");
     }
 
-    @Bean
-    public Binding debitCardBinding(Queue paymentQueue, TopicExchange paymentExchange) {
-        return BindingBuilder.bind(paymentQueue)
-                .to(paymentExchange)
-                .with("payment.card.debit.*");
-    }
+//    @Bean
+//    public Binding debitCardBinding(Queue paymentQueue, TopicExchange paymentExchange) {
+//        return BindingBuilder.bind(paymentQueue)
+//                .to(paymentExchange)
+//                .with("payment.card.debit.*");
+//    }
 //    @Bean
 //    public Binding notificationBinding(Queue notificationQueue, TopicExchange orderExchange) {
 //        // Listen to all order events (created, shipped, delivered, etc.)
