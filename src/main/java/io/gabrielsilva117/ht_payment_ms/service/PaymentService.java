@@ -5,7 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 import io.gabrielsilva117.ht_payment_ms.dto.NotificationDTO;
 import io.gabrielsilva117.ht_payment_ms.dto.PaymentDTO;
-import io.gabrielsilva117.ht_payment_ms.enums.PaymentType;
+import io.gabrielsilva117.ht_payment_ms.dto.PaymentResponse;
+import io.gabrielsilva117.ht_payment_ms.enums.PaymentStatus;
 import io.gabrielsilva117.ht_payment_ms.processor.PaymentFactory;
 import io.gabrielsilva117.ht_payment_ms.processor.PaymentProcessor;
 import io.gabrielsilva117.ht_payment_ms.publishers.NotificationPublisher;
@@ -28,6 +29,19 @@ public class PaymentService {
 
     public PaymentDTO constructDTO (String rawObj) throws JsonProcessingException {
         return this.objectMapper.readValue(rawObj, PaymentDTO.class);
+    }
+
+    public PaymentResponse processPayment(PaymentDTO obj) throws JsonProcessingException {
+        triggerPayment(obj);
+        return new PaymentResponse(PaymentStatus.SUCCESS);
+    }
+
+    private void triggerPayment(PaymentDTO paymentDTO) throws JsonProcessingException {
+        notificationPublisher.publishNotification(new NotificationDTO(
+                "Purchase Complete!",
+                "Congratulations, your purchase has been completed!",
+                "gabriel.f.silva117@gmail.com"
+        ));
     }
 
     public void processPayment(String payload, Channel channel, Message msg) throws IOException {
@@ -56,15 +70,15 @@ public class PaymentService {
 
     private void handleError(PaymentDTO payment, Message message, Channel channel,
                              long deliveryTag, Exception e) throws IOException {
-        int retryCount = getRetryCount(message);
-        if (retryCount < 3) {
-            logger.warn("Requeuing payment {} (retry {})", payment.getCartId(), retryCount);
-            channel.basicNack(deliveryTag, false, true);
-        } else {
+//        int retryCount = getRetryCount(message);
+//        if (retryCount < 3) {
+//            logger.warn("Requeuing payment {} (retry {})", payment.getCartId(), retryCount);
+//            channel.basicNack(deliveryTag, false, true);
+//        } else {
             logger.error("Max retries reached for payment {}. Sending to DLQ",
                     payment.getCartId());
             channel.basicNack(deliveryTag, false, false);
-        }
+//        }
     }
 
     private int getRetryCount(Message message) {
