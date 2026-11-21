@@ -2,4 +2,6 @@ package io.gabrielsilva117.ht_payment_ms.enums;
 
 public enum PaymentType {
     CARD,
+    PAYPAL,
+    PIX
 }
