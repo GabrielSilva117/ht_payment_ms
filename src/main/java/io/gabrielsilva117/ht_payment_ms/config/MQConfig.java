@@ -1,6 +1,9 @@
 package io.gabrielsilva117.ht_payment_ms.config;
 
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -11,6 +14,16 @@ public class MQConfig {
 
     public static final String PAYMENT_QUEUE = "payment_dispatch";
     public static final String NOTIFICATION_QUEUE = "email_dispatch";
+
+    // Scoped to outbound publish only (RabbitTemplate) — deliberately not a global
+    // MessageConverter bean, which would also get picked up by the @RabbitListener
+    // container factory and break PaymentConsumers' raw String payload handling.
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(new Jackson2JsonMessageConverter());
+        return template;
+    }
 
     @Bean
     public TopicExchange paymentExchange() {
