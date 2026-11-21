@@ -44,22 +44,14 @@ public class MQConfig {
         return new Queue(NOTIFICATION_QUEUE, true);
     }
 
-    // Bindings
-    @Bean
-    public Binding successPaymentBinding(Queue paymentQueue, TopicExchange paymentExchange) {
-        // Listen to all "created" orders regardless of category
-        return BindingBuilder.bind(paymentQueue)
-                .to(paymentExchange)
-                .with("payment.*.created");
-    }
-
-
-    @Bean
-    public Binding cardBinding(Queue paymentQueue, TopicExchange paymentExchange) {
-        return BindingBuilder.bind(paymentQueue)
-                .to(paymentExchange)
-                .with("payment.card.*");
-    }
+    // No bindings here: payment_dispatch carries only inbound processing requests
+    // (delivered by the monolith direct-to-queue). It previously also bound to
+    // "payment.*.created"/"payment.card.*" on paymentExchange — copy-pasted from an
+    // order-service template since the initial commit — which looped this service's
+    // own outbound PaymentPublisher lifecycle events (card.created/card.failed) back
+    // into PaymentConsumers as if they were new payment requests. No consumer in this
+    // codebase currently listens for those lifecycle events; a future one should bind
+    // its own queue to paymentExchange rather than reuse payment_dispatch.
 
 //    @Bean
 //    public Binding debitCardBinding(Queue paymentQueue, TopicExchange paymentExchange) {
