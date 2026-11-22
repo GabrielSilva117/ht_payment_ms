@@ -11,7 +11,8 @@ import java.util.UUID;
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,              // Use a logical type name
         include = JsonTypeInfo.As.PROPERTY,      // Include as a JSON property
-        property = "type"                 // Property name in JSON
+        property = "type",                // Property name in JSON
+        visible = true                    // also bind "type" onto the `type` field itself, not just use it for dispatch
 )
 @JsonSubTypes({
         @JsonSubTypes.Type(value = CardPaymentDTO.class, name = "CARD"),

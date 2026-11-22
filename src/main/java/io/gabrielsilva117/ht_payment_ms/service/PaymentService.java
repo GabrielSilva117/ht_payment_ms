@@ -6,9 +6,14 @@ import com.rabbitmq.client.Channel;
 import io.gabrielsilva117.ht_payment_ms.dto.NotificationDTO;
 import io.gabrielsilva117.ht_payment_ms.dto.PaymentDTO;
 import io.gabrielsilva117.ht_payment_ms.dto.PaymentResponse;
+import io.gabrielsilva117.ht_payment_ms.entity.Payment;
+import io.gabrielsilva117.ht_payment_ms.enums.PaymentEntityStatus;
 import io.gabrielsilva117.ht_payment_ms.enums.PaymentStatus;
+import io.gabrielsilva117.ht_payment_ms.exception.DuplicatePaymentException;
+import io.gabrielsilva117.ht_payment_ms.exception.PaymentPersistenceException;
 import io.gabrielsilva117.ht_payment_ms.processor.PaymentFactory;
 import io.gabrielsilva117.ht_payment_ms.processor.PaymentProcessor;
+import io.gabrielsilva117.ht_payment_ms.processor.PaymentProcessorResult;
 import io.gabrielsilva117.ht_payment_ms.publishers.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -26,63 +31,96 @@ public class PaymentService {
     private final ObjectMapper objectMapper;
     private final NotificationPublisher notificationPublisher;
     private final PaymentFactory paymentFactory;
+    private final PaymentPersistenceService paymentPersistenceService;
 
-    public PaymentDTO constructDTO (String rawObj) throws JsonProcessingException {
+    public PaymentDTO constructDTO(String rawObj) throws JsonProcessingException {
         return this.objectMapper.readValue(rawObj, PaymentDTO.class);
     }
 
-    public PaymentResponse processPayment(PaymentDTO obj) throws JsonProcessingException {
-        triggerPayment(obj);
-        return new PaymentResponse(PaymentStatus.SUCCESS);
-    }
+    public PaymentResponse processPayment(PaymentDTO obj) {
+        Payment payment;
+        try {
+            payment = paymentPersistenceService.createPending(obj);
+        } catch (DuplicatePaymentException dup) {
+            logger.info("Duplicate payment request for cartId {}", obj.getCartId());
+            Payment existing = paymentPersistenceService.findByCartId(obj.getCartId());
+            return new PaymentResponse(toApiStatus(existing.getStatus()));
+        }
 
-    private void triggerPayment(PaymentDTO paymentDTO) throws JsonProcessingException {
-        notificationPublisher.publishNotification(new NotificationDTO(
-                "Purchase Complete!",
-                "Congratulations, your purchase has been completed!",
-                "gabriel.f.silva117@gmail.com"
-        ));
+        return new PaymentResponse(runGateway(payment, obj));
     }
 
     public void processPayment(String payload, Channel channel, Message msg) throws IOException {
-        triggerPayment(this.constructDTO(payload), msg, channel);
-
-        notificationPublisher.publishNotification(new NotificationDTO(
-                "Purchase Complete!",
-                "Congratulations, your purchase has been completed!",
-                "gabriel.f.silva117@gmail.com"
-        ));
-    }
-
-    private void triggerPayment(PaymentDTO paymentDTO, Message msg, Channel channel) throws IOException {
         long deliveryTag = msg.getMessageProperties().getDeliveryTag();
 
+        PaymentDTO dto;
         try {
-            PaymentProcessor processor = paymentFactory.getProcessor(paymentDTO.getType());
-            // run common validations
+            dto = constructDTO(payload);
+        } catch (JsonProcessingException e) {
+            logger.error("Malformed payment payload, routing to DLQ", e);
+            channel.basicNack(deliveryTag, false, false);
+            return;
+        }
 
-            processor.process(paymentDTO);
+        Payment payment;
+        try {
+            payment = paymentPersistenceService.createPending(dto);
+        } catch (DuplicatePaymentException dup) {
+            logger.warn("Duplicate delivery for cartId {}, acking without reprocessing", dto.getCartId());
             channel.basicAck(deliveryTag, false);
-        } catch (Exception exception) {
-            handleError(paymentDTO, msg, channel, deliveryTag, exception);
+            return;
+        } catch (PaymentPersistenceException persistenceFailure) {
+            logger.error("Failed to persist payment {}, requeueing", dto.getCartId(), persistenceFailure);
+            channel.basicNack(deliveryTag, false, true);
+            return;
+        }
+
+        // Row is durably committed -> ack now, unconditionally, before the gateway call runs.
+        channel.basicAck(deliveryTag, false);
+
+        runGateway(payment, dto);
+    }
+
+    private PaymentStatus runGateway(Payment payment, PaymentDTO dto) {
+        try {
+            PaymentProcessor processor = paymentFactory.getProcessor(dto.getType());
+            PaymentProcessorResult result = processor.process(dto);
+            if (result.isPending()) {
+                paymentPersistenceService.markProcessing(
+                        payment.getId(), result.getGatewayReference(), result.getCardLast4());
+                return PaymentStatus.PROCESSING;
+            }
+            if (result.isSuccess()) {
+                paymentPersistenceService.markSucceeded(payment.getId(), result.getGatewayReference());
+                notifySuccess();
+                return PaymentStatus.SUCCESS;
+            }
+            paymentPersistenceService.markFailed(payment.getId(), result.getFailureReason());
+            return PaymentStatus.FAILURE;
+        } catch (Exception unexpected) {
+            logger.error("Unexpected error invoking gateway for payment {}", dto.getCartId(), unexpected);
+            paymentPersistenceService.markFailed(payment.getId(), unexpected.getMessage());
+            return PaymentStatus.FAILURE;
         }
     }
 
-    private void handleError(PaymentDTO payment, Message message, Channel channel,
-                             long deliveryTag, Exception e) throws IOException {
-//        int retryCount = getRetryCount(message);
-//        if (retryCount < 3) {
-//            logger.warn("Requeuing payment {} (retry {})", payment.getCartId(), retryCount);
-//            channel.basicNack(deliveryTag, false, true);
-//        } else {
-            logger.error("Max retries reached for payment {}. Sending to DLQ",
-                    payment.getCartId());
-            channel.basicNack(deliveryTag, false, false);
-//        }
+    private void notifySuccess() {
+        try {
+            notificationPublisher.publishNotification(new NotificationDTO(
+                    "Purchase Complete!",
+                    "Congratulations, your purchase has been completed!",
+                    "gabriel.f.silva117@gmail.com"
+            ));
+        } catch (JsonProcessingException e) {
+            logger.error("Failed to publish success notification", e);
+        }
     }
 
-    private int getRetryCount(Message message) {
-        Integer count = (Integer) message.getMessageProperties().getHeaders().get("x-retry-count");
-        return count != null ? count : 0;
+    private PaymentStatus toApiStatus(PaymentEntityStatus status) {
+        return switch (status) {
+            case SUCCEEDED -> PaymentStatus.SUCCESS;
+            case PENDING, PROCESSING -> PaymentStatus.PROCESSING;
+            case FAILED -> PaymentStatus.FAILURE;
+        };
     }
 }

@@ -2,5 +2,6 @@ package io.gabrielsilva117.ht_payment_ms.enums;
 
 public enum PaymentStatus {
     SUCCESS,
-    FAILURE
+    FAILURE,
+    PROCESSING
 }
